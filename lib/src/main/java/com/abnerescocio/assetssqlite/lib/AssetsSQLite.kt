@@ -28,7 +28,7 @@ abstract class AssetsSQLite(private val context: Context, name: String,
         standardDatabasePath = standardDatabaseDir + databaseName
         context as Activity
         textView = context.findViewById(android.R.id.text1)
-        progressBar = context.findViewById(android.R.id.progress)
+        progressBar = context.findViewById(android.R.id.progress) as ProgressBar
     }
 
     abstract override fun onCreate(db: SQLiteDatabase?)
