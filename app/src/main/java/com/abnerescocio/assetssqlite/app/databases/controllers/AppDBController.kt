@@ -20,4 +20,8 @@ open class AppDBController(context: Context) {
         return sqLiteDatabase.query(tableName, null, null, null,
                 null, null, null, null)
     }
+
+    fun close() {
+        sqLiteDatabase.close()
+    }
 }
