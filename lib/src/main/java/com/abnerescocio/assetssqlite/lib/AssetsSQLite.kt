@@ -12,7 +12,7 @@ import java.util.zip.ZipFile
 /**
  * Created by abnerESC on 02/03/2018
  */
-abstract class AssetsSQLite(private val context: Context, name: String,
+open class AssetsSQLite(private val context: Context, name: String,
                    factory: SQLiteDatabase.CursorFactory?, private val newVersion: Int)
     : SQLiteOpenHelper(context, name, factory, newVersion) {
 
@@ -24,6 +24,14 @@ abstract class AssetsSQLite(private val context: Context, name: String,
                 DATABASES + File.separator
         standardDatabasePath = standardDatabaseDir + databaseName
         context as Activity
+    }
+
+    override fun onCreate(db: SQLiteDatabase?) {
+
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+
     }
 
     override fun getWritableDatabase(): SQLiteDatabase? {
