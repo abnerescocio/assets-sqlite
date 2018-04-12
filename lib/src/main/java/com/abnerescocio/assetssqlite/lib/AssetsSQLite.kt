@@ -5,8 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
-import android.widget.ProgressBar
-import android.widget.TextView
+import android.util.Log
 import java.io.*
 import java.util.zip.ZipFile
 
@@ -14,41 +13,38 @@ import java.util.zip.ZipFile
  * Created by abnerESC on 02/03/2018
  */
 abstract class AssetsSQLite(private val context: Context, name: String,
-                   factory: SQLiteDatabase.CursorFactory?, version: Int)
-    : SQLiteOpenHelper(context, name, factory, version) {
+                   factory: SQLiteDatabase.CursorFactory?, private val newVersion: Int)
+    : SQLiteOpenHelper(context, name, factory, newVersion) {
 
     private val standardDatabaseDir: String
     private val standardDatabasePath: String
-    private var textView: TextView? = null
-    private var progressBar: ProgressBar? = null
 
     init {
         standardDatabaseDir = context.applicationInfo.dataDir + File.separator +
                 DATABASES + File.separator
         standardDatabasePath = standardDatabaseDir + databaseName
         context as Activity
-        textView = context.findViewById(android.R.id.text1)
-        progressBar = context.findViewById(android.R.id.progress) as ProgressBar
     }
 
-    abstract override fun onCreate(db: SQLiteDatabase?)
-
-    abstract override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int)
-
     override fun getWritableDatabase(): SQLiteDatabase? {
-        var sqLiteDatabase: SQLiteDatabase? = null
-        //if (File(standardDatabasePath).exists()) sqLiteDatabase = openStandardDatabase()
+        var sqLiteDatabase = openStandardDatabase()
+        val oldVersion = sqLiteDatabase?.version
+        if (oldVersion!! < newVersion) sqLiteDatabase = null
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabase()
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabaseCompacted()
         if (sqLiteDatabase == null) throw SQLiteException("Esteja certo de ter adicionado na pasta " +
                 "ASSETS arquivos com uma das extensões: $databaseName " +
                 "ou ${databaseName.replace(".db", ".zip")}")
+        sqLiteDatabase.beginTransaction()
+        sqLiteDatabase.version = newVersion
+        sqLiteDatabase.setTransactionSuccessful()
+        sqLiteDatabase.endTransaction()
         return sqLiteDatabase
     }
 
     private fun openStandardDatabase(): SQLiteDatabase? {
         return try {
-            SQLiteDatabase.openDatabase(File(standardDatabasePath).absolutePath, null, 0)
+            SQLiteDatabase.openDatabase(File(standardDatabasePath).absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
         } catch (e: SQLiteException) {
             null
         }
@@ -66,16 +62,15 @@ abstract class AssetsSQLite(private val context: Context, name: String,
     private fun openAssetsDatabaseCompacted(): SQLiteDatabase? {
         return File(standardDatabasePath.replace(".db", ".zip")).let {
             if (!it.exists()) copyFileFromAssetsToStandardPath(it)
-            textView?.text = context.getText(R.string.unziping_files)
+            Log.i(TAG, context.getString(R.string.unziping_files))
             if (it.exists()) {
                 ZipFile(it).use {
                     BufferedInputStream(it.getInputStream(it.getEntry(databaseName))).use { bis: BufferedInputStream ->
                         File(standardDatabasePath).outputStream().buffered().use {
-                            /*progressBar?.max = bis.read()
-                            progressBar?.progress = */bis.copyTo(it)/*.toInt()*/
+                            bis.copyTo(it)
                         }
                     }
-                    textView?.text = context.getText(R.string.unziping_successfully)
+                    Log.i(TAG, context.getString(R.string.unziping_successfully))
                 }
                 openStandardDatabase()
             } else null
@@ -86,6 +81,7 @@ abstract class AssetsSQLite(private val context: Context, name: String,
         return try {
             context.assets.open(databaseRealFileName)
         } catch (e: FileNotFoundException) {
+            e.printStackTrace()
             null
         }
     }
@@ -94,13 +90,14 @@ abstract class AssetsSQLite(private val context: Context, name: String,
         File(standardDatabaseDir).let { if (!it.exists()) it.mkdir() }
         getInputStreamFromAssets(file.name).let { inputStream: InputStream? ->
             if (inputStream != null) FileOutputStream(file.absolutePath).let {
-                textView?.text = context.getText(R.string.moving_files)
+                Log.i(TAG, context.getString(R.string.moving_files))
                 inputStream.copyTo(it)
             }
         }
     }
 
     companion object {
+        const val TAG = "AssetsSQLite"
         const val DATABASES = "databases"
     }
 }
