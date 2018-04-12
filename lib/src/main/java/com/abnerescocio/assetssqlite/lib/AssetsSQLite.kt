@@ -36,8 +36,7 @@ open class AssetsSQLite(private val context: Context, name: String,
 
     override fun getWritableDatabase(): SQLiteDatabase? {
         var sqLiteDatabase = openStandardDatabase()
-        val oldVersion = sqLiteDatabase?.version
-        if (oldVersion!! < newVersion) sqLiteDatabase = null
+        if (sqLiteDatabase != null && sqLiteDatabase.version < newVersion) sqLiteDatabase = null
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabase()
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabaseCompacted()
         if (sqLiteDatabase == null) throw SQLiteException("Esteja certo de ter adicionado na pasta " +
@@ -52,7 +51,7 @@ open class AssetsSQLite(private val context: Context, name: String,
 
     private fun openStandardDatabase(): SQLiteDatabase? {
         return try {
-            SQLiteDatabase.openDatabase(File(standardDatabasePath).absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            SQLiteDatabase.openDatabase(File(standardDatabasePath).absolutePath, null, 0)
         } catch (e: SQLiteException) {
             null
         }
