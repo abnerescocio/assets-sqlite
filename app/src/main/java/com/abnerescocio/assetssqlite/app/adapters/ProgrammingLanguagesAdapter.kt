@@ -16,21 +16,20 @@ import kotlinx.android.synthetic.main.item_programming_language.view.*
  */
 class ProgrammingLanguagesAdapter(private val context: Context?, private val cursor: Cursor?)
     : RecyclerView.Adapter<ProgrammingLanguagesAdapter.ViewHolder>() {
-
-    override fun onCreateViewHolder(parent: ViewGroup?, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(LayoutInflater.from(context).inflate(R.layout.item_programming_language, parent, false))
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        cursor?.moveToPosition(position)
+        holder.itemView?.text_view_name?.text =
+                cursor?.getString(cursor.getColumnIndex(ProgrammingLanguagesEntries.NAME))
+        holder.itemView?.text_view_created_in?.text =
+                cursor?.getString(cursor.getColumnIndex(ProgrammingLanguagesEntries.CREATED_IN))
     }
 
     override fun getItemCount(): Int {
         return cursor?.count!!
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder?, position: Int) {
-        cursor?.moveToPosition(position)
-        holder?.itemView?.text_view_name?.text =
-                cursor?.getString(cursor.getColumnIndex(ProgrammingLanguagesEntries.NAME))
-        holder?.itemView?.text_view_created_in?.text =
-                cursor?.getString(cursor.getColumnIndex(ProgrammingLanguagesEntries.CREATED_IN))
     }
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
