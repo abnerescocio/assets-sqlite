@@ -76,10 +76,10 @@ open class AssetsSQLite(private val context: Context, name: String,
             if (!it.exists()) copyFileFromAssetsToStandardPath(it)
             Log.i(TAG, context.getString(R.string.unziping_files))
             if (it.exists()) {
-                ZipFile(it).use {
-                    BufferedInputStream(it.getInputStream(it.getEntry(databaseName))).use { bis: BufferedInputStream ->
-                        File(standardDatabasePath).outputStream().buffered().use {
-                            bis.copyTo(it)
+                ZipFile(it).use { zip ->
+                    BufferedInputStream(zip.getInputStream(zip.getEntry(databaseName))).use { bis ->
+                        File(standardDatabasePath).outputStream().buffered().use { bos ->
+                            bis.copyTo(bos)
                         }
                     }
                     Log.i(TAG, context.getString(R.string.unziping_successfully))
