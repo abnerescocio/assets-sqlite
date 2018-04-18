@@ -3,6 +3,7 @@ package com.abnerescocio.assetssqlite.lib
 import android.app.Activity
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabaseLockedException
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
@@ -42,10 +43,14 @@ open class AssetsSQLite(private val context: Context, name: String,
         if (sqLiteDatabase == null) throw SQLiteException("Esteja certo de ter adicionado na pasta " +
                 "ASSETS arquivos com uma das extensões: $databaseName " +
                 "ou ${databaseName.replace(".db", ".zip")}")
-        sqLiteDatabase.beginTransaction()
-        sqLiteDatabase.version = newVersion
-        sqLiteDatabase.setTransactionSuccessful()
-        sqLiteDatabase.endTransaction()
+        try {
+            sqLiteDatabase.beginTransaction()
+            sqLiteDatabase.version = newVersion
+            sqLiteDatabase.setTransactionSuccessful()
+            sqLiteDatabase.endTransaction()
+        } catch (e: SQLiteDatabaseLockedException) {
+            e.printStackTrace()
+        }
         return sqLiteDatabase
     }
 
