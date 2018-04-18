@@ -93,7 +93,7 @@ open class AssetsSQLite(private val context: Context, name: String,
                                     context as Activity
                                     context.runOnUiThread(Runnable {
                                         listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
-                                                entry.compressedSize, bytesCopied)
+                                                entry.size, bytesCopied)
                                     })
                                 }
                             }
