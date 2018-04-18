@@ -1,6 +1,5 @@
 package com.abnerescocio.assetssqlite.lib
 
-import android.app.Activity
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabaseLockedException
@@ -19,12 +18,13 @@ open class AssetsSQLite(private val context: Context, name: String,
 
     private val standardDatabaseDir: String
     private val standardDatabasePath: String
+    private var listener: ProgressAssetsSQLiteListener? = null
 
     init {
         standardDatabaseDir = context.applicationInfo.dataDir + File.separator +
                 DATABASES + File.separator
         standardDatabasePath = standardDatabaseDir + databaseName
-        context as Activity
+        if (context is ProgressAssetsSQLiteListener) listener = context
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -77,12 +77,24 @@ open class AssetsSQLite(private val context: Context, name: String,
             Log.i(TAG, context.getString(R.string.unziping_files))
             if (it.exists()) {
                 ZipFile(it).use { zip ->
-                    BufferedInputStream(zip.getInputStream(zip.getEntry(databaseName))).use { bis ->
-                        File(standardDatabasePath).outputStream().buffered().use { bos ->
-                            bis.copyTo(bos)
+                    zip.getEntry(databaseName).let { entry ->
+                        Log.i(TAG, "compressedSize: ${entry.compressedSize}, size: ${entry.size}")
+                        BufferedInputStream(zip.getInputStream(entry)).use { bis ->
+                            File(standardDatabasePath).outputStream().buffered().use { bos ->
+                                var bytesCopied: Long = 0
+                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                var bytes = bis.read(buffer)
+                                while (bytes >= 0) {
+                                    bos.write(buffer, 0, bytes)
+                                    bytesCopied += bytes
+                                    bytes = bis.read(buffer)
+                                    Log.i(TAG, "byteSize: ${entry.size}, bytesCopied: ${bytesCopied}")
+                                    listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize, entry.compressedSize, bytesCopied)
+                                }
+                            }
                         }
+                        Log.i(TAG, context.getString(R.string.unziping_successfully))
                     }
-                    Log.i(TAG, context.getString(R.string.unziping_successfully))
                 }
                 openStandardDatabase()
             } else null
@@ -106,6 +118,10 @@ open class AssetsSQLite(private val context: Context, name: String,
                 inputStream.copyTo(it)
             }
         }
+    }
+
+    interface ProgressAssetsSQLiteListener {
+        fun onProgressAssetsSQLiteUnziping(compressedBytesSize: Long, bytesSize: Long, bytesSizeUnziped: Long)
     }
 
     companion object {
