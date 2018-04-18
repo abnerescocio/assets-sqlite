@@ -1,5 +1,6 @@
 package com.abnerescocio.assetssqlite.lib
 
+import android.app.Activity
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabaseLockedException
@@ -89,7 +90,11 @@ open class AssetsSQLite(private val context: Context, name: String,
                                     bytesCopied += bytes
                                     bytes = bis.read(buffer)
                                     Log.i(TAG, "byteSize: ${entry.size}, bytesCopied: ${bytesCopied}")
-                                    listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize, entry.compressedSize, bytesCopied)
+                                    context as Activity
+                                    context.runOnUiThread(Runnable {
+                                        listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
+                                                entry.compressedSize, bytesCopied)
+                                    })
                                 }
                             }
                         }
