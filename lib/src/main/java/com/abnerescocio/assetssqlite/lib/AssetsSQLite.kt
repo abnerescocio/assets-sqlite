@@ -86,6 +86,7 @@ open class AssetsSQLite(private val context: Context, name: String,
                                 var bytesSizeUnziped: Long = 0
                                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                                 var bytes = bis.read(buffer)
+                                context as Activity
                                 while (bytes >= 0) {
                                     bos.write(buffer, 0, bytes)
                                     bytesSizeUnziped += bytes
@@ -93,13 +94,14 @@ open class AssetsSQLite(private val context: Context, name: String,
                                     val progress = (bytesSizeUnziped.toDouble() / entry.size.toDouble()) * 100.0
                                     Log.i(TAG, "progress: ${progress.roundTo2DecimalPlaces()}%, " +
                                             "byteSize: ${entry.size}, bytesSizeUnziped: $bytesSizeUnziped")
-                                    context as Activity
                                     context.runOnUiThread(Runnable {
                                         listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
-                                                entry.size, bytesSizeUnziped, progress)
+                                                entry.size, bytesSizeUnziped, progress.roundTo2DecimalPlaces())
                                     })
                                 }
-                                listener?.onFinishUnzip(entry.compressedSize, bytesSizeUnziped)
+                                context.runOnUiThread(Runnable {
+                                    listener?.onFinishUnzip(entry.compressedSize, bytesSizeUnziped)
+                                })
                             }
                         }
                         Log.i(TAG, context.getString(R.string.unziping_successfully))
