@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import java.io.*
+import java.math.BigDecimal
 import java.util.zip.ZipFile
 
 /**
@@ -82,20 +83,23 @@ open class AssetsSQLite(private val context: Context, name: String,
                         Log.i(TAG, "compressedSize: ${entry.compressedSize}, size: ${entry.size}")
                         BufferedInputStream(zip.getInputStream(entry)).use { bis ->
                             File(standardDatabasePath).outputStream().buffered().use { bos ->
-                                var bytesCopied: Long = 0
+                                var bytesSizeUnziped: Long = 0
                                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                                 var bytes = bis.read(buffer)
                                 while (bytes >= 0) {
                                     bos.write(buffer, 0, bytes)
-                                    bytesCopied += bytes
+                                    bytesSizeUnziped += bytes
                                     bytes = bis.read(buffer)
-                                    Log.i(TAG, "byteSize: ${entry.size}, bytesCopied: ${bytesCopied}")
+                                    val progress = (bytesSizeUnziped.toDouble() / entry.size.toDouble()) * 100.0
+                                    Log.i(TAG, "progress: ${progress.roundTo2DecimalPlaces()}%, " +
+                                            "byteSize: ${entry.size}, bytesSizeUnziped: $bytesSizeUnziped")
                                     context as Activity
                                     context.runOnUiThread(Runnable {
                                         listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
-                                                entry.size, bytesCopied)
+                                                entry.size, bytesSizeUnziped, progress)
                                     })
                                 }
+                                listener?.onFinishUnzip(entry.compressedSize, bytesSizeUnziped)
                             }
                         }
                         Log.i(TAG, context.getString(R.string.unziping_successfully))
@@ -126,8 +130,13 @@ open class AssetsSQLite(private val context: Context, name: String,
     }
 
     interface ProgressAssetsSQLiteListener {
-        fun onProgressAssetsSQLiteUnziping(compressedBytesSize: Long, bytesSize: Long, bytesSizeUnziped: Long)
+        fun onProgressAssetsSQLiteUnziping(compressedBytesSize: Long, bytesSize: Long,
+                                           bytesSizeUnziped: Long, progress: Double)
+        fun onFinishUnzip(compressedBytesSize: Long, bytesSizeUnziped: Long)
     }
+
+    fun Double.roundTo2DecimalPlaces() = BigDecimal(this)
+            .setScale(2, BigDecimal.ROUND_HALF_UP).toDouble()
 
     companion object {
         const val TAG = "AssetsSQLite"
