@@ -137,7 +137,7 @@ open class AssetsSQLite(private val context: Context, name: String,
         fun onFinishUnzip(compressedBytesSize: Long, bytesSizeUnziped: Long)
     }
 
-    fun Double.roundTo2DecimalPlaces() = BigDecimal(this)
+    private fun Double.roundTo2DecimalPlaces() = BigDecimal(this)
             .setScale(2, BigDecimal.ROUND_HALF_UP).toDouble()
 
     companion object {
