@@ -108,7 +108,9 @@ open class AssetsSQLite(private val context: Context, name: String,
                             }
                             Log.i(TAG, context.getString(R.string.unziping_successfully))
                         } else {
-                            listener?.onErrorUnziping(IOException("Armazenamento interno insuficiente"))
+                            listener?.onErrorUnziping(IOException("Armazenamento interno insuficiente. " +
+                                    "Necessário ${(entry.size / 1024) / 1024} MB, " +
+                                    "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
                             return null
                         }
                     }
