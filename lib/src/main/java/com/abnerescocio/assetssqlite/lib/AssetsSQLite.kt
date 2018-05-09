@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabaseLockedException
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Environment
+import android.os.StatFs
 import android.util.Log
 import java.io.*
 import java.math.BigDecimal
@@ -42,14 +44,14 @@ open class AssetsSQLite(private val context: Context, name: String,
         if (sqLiteDatabase != null && sqLiteDatabase.version < newVersion) sqLiteDatabase = null
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabase()
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabaseCompacted()
-        if (sqLiteDatabase == null) throw SQLiteException("Esteja certo de ter adicionado na pasta " +
+        if (sqLiteDatabase == null) listener?.onErrorUnziping(SQLiteException("Esteja certo de ter adicionado na pasta " +
                 "ASSETS arquivos com uma das extensões: $databaseName " +
-                "ou ${databaseName.replace(".db", ".zip")}")
+                "ou ${databaseName.replace(".db", ".zip")}"))
         try {
-            sqLiteDatabase.beginTransaction()
-            sqLiteDatabase.version = newVersion
-            sqLiteDatabase.setTransactionSuccessful()
-            sqLiteDatabase.endTransaction()
+            sqLiteDatabase?.beginTransaction()
+            sqLiteDatabase?.version = newVersion
+            sqLiteDatabase?.setTransactionSuccessful()
+            sqLiteDatabase?.endTransaction()
         } catch (e: SQLiteDatabaseLockedException) {
             e.printStackTrace()
         }
@@ -60,6 +62,7 @@ open class AssetsSQLite(private val context: Context, name: String,
         return try {
             SQLiteDatabase.openDatabase(File(standardDatabasePath).absolutePath, null, 0)
         } catch (e: SQLiteException) {
+            e.printStackTrace()
             null
         }
     }
@@ -76,35 +79,38 @@ open class AssetsSQLite(private val context: Context, name: String,
     private fun openAssetsDatabaseCompacted(): SQLiteDatabase? {
         return File(standardDatabasePath.replace(".db", ".zip")).let {
             if (!it.exists()) copyFileFromAssetsToStandardPath(it)
+            val stateFs = StatFs(Environment.getExternalStorageDirectory().absolutePath)
             Log.i(TAG, context.getString(R.string.unziping_files))
             if (it.exists()) {
                 ZipFile(it).use { zip ->
                     zip.getEntry(databaseName).let { entry ->
-                        Log.i(TAG, "compressedSize: ${entry.compressedSize}, size: ${entry.size}")
-                        BufferedInputStream(zip.getInputStream(entry)).use { bis ->
-                            File(standardDatabasePath).outputStream().buffered().use { bos ->
-                                var bytesSizeUnziped: Long = 0
-                                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                                var bytes = bis.read(buffer)
-                                context as Activity
-                                while (bytes >= 0) {
-                                    bos.write(buffer, 0, bytes)
-                                    bytesSizeUnziped += bytes
-                                    bytes = bis.read(buffer)
-                                    val progress = (bytesSizeUnziped.toDouble() / entry.size.toDouble()) * 100.0
-                                    Log.i(TAG, "progress: ${progress.roundTo2DecimalPlaces()}%, " +
-                                            "byteSize: ${entry.size}, bytesSizeUnziped: $bytesSizeUnziped")
+                        if (stateFs.availableBytes > entry.size) {
+                            BufferedInputStream(zip.getInputStream(entry)).use { bis ->
+                                File(standardDatabasePath).outputStream().buffered().use { bos ->
+                                    var bytesSizeUnziped: Long = 0
+                                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                    var bytes = bis.read(buffer)
+                                    context as Activity
+                                    while (bytes >= 0) {
+                                        bos.write(buffer, 0, bytes)
+                                        bytesSizeUnziped += bytes
+                                        bytes = bis.read(buffer)
+                                        val progress = (bytesSizeUnziped.toDouble() / entry.size.toDouble()) * 100.0
+                                        context.runOnUiThread(Runnable {
+                                            listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
+                                                    entry.size, bytesSizeUnziped, progress.roundTo2DecimalPlaces())
+                                        })
+                                    }
                                     context.runOnUiThread(Runnable {
-                                        listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
-                                                entry.size, bytesSizeUnziped, progress.roundTo2DecimalPlaces())
+                                        listener?.onFinishUnzip(entry.compressedSize, bytesSizeUnziped)
                                     })
                                 }
-                                context.runOnUiThread(Runnable {
-                                    listener?.onFinishUnzip(entry.compressedSize, bytesSizeUnziped)
-                                })
                             }
+                            Log.i(TAG, context.getString(R.string.unziping_successfully))
+                        } else {
+                            listener?.onErrorUnziping(IOException("Armazenamento interno insuficiente"))
+                            return null
                         }
-                        Log.i(TAG, context.getString(R.string.unziping_successfully))
                     }
                 }
                 openStandardDatabase()
@@ -135,6 +141,7 @@ open class AssetsSQLite(private val context: Context, name: String,
         fun onProgressAssetsSQLiteUnziping(compressedBytesSize: Long, bytesSize: Long,
                                            bytesSizeUnziped: Long, progress: Double)
         fun onFinishUnzip(compressedBytesSize: Long, bytesSizeUnziped: Long)
+        fun onErrorUnziping(exception: Exception)
     }
 
     private fun Double.roundTo2DecimalPlaces() = BigDecimal(this)
