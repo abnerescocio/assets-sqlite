@@ -44,9 +44,9 @@ open class AssetsSQLite(private val context: Context, name: String,
         if (sqLiteDatabase != null && sqLiteDatabase.version < newVersion) sqLiteDatabase = null
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabase()
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabaseCompacted()
-        if (sqLiteDatabase == null) listener?.onErrorUnziping(SQLiteException("Esteja certo de ter adicionado na pasta " +
+        if (sqLiteDatabase == null) SQLiteException("Esteja certo de ter adicionado na pasta " +
                 "ASSETS arquivos com uma das extensões: $databaseName " +
-                "ou ${databaseName.replace(".db", ".zip")}"))
+                "ou ${databaseName.replace(".db", ".zip")}").printStackTrace()
         try {
             sqLiteDatabase?.beginTransaction()
             sqLiteDatabase?.version = newVersion
@@ -81,6 +81,7 @@ open class AssetsSQLite(private val context: Context, name: String,
             if (!it.exists()) copyFileFromAssetsToStandardPath(it)
             val stateFs = StatFs(Environment.getExternalStorageDirectory().absolutePath)
             Log.i(TAG, context.getString(R.string.unziping_files))
+            context as Activity
             if (it.exists()) {
                 ZipFile(it).use { zip ->
                     zip.getEntry(databaseName).let { entry ->
@@ -90,13 +91,12 @@ open class AssetsSQLite(private val context: Context, name: String,
                                     var bytesSizeUnziped: Long = 0
                                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                                     var bytes = bis.read(buffer)
-                                    context as Activity
                                     while (bytes >= 0) {
                                         bos.write(buffer, 0, bytes)
                                         bytesSizeUnziped += bytes
                                         bytes = bis.read(buffer)
                                         val progress = (bytesSizeUnziped.toDouble() / entry.size.toDouble()) * 100.0
-                                        context.runOnUiThread(Runnable {
+                                        context.runOnUiThread( Runnable {
                                             listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
                                                     entry.size, bytesSizeUnziped, progress.roundTo2DecimalPlaces())
                                         })
@@ -108,9 +108,12 @@ open class AssetsSQLite(private val context: Context, name: String,
                             }
                             Log.i(TAG, context.getString(R.string.unziping_successfully))
                         } else {
-                            listener?.onErrorUnziping(IOException("Armazenamento interno insuficiente. " +
-                                    "Necessário ${(entry.size / 1024) / 1024} MB, " +
-                                    "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
+                            context.runOnUiThread { Runnable {
+                                listener?.onErrorUnziping(IOException("Armazenamento insuficiente. " +
+                                        "Necessário ${(entry.size / 1024) / 1024} MB, " +
+                                        "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
+
+                            } }
                             return null
                         }
                     }
