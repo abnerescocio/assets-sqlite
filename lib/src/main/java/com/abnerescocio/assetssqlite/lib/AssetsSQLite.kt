@@ -22,7 +22,10 @@ open class AssetsSQLite(private val context: Context, name: String,
 
     private val standardDatabaseDir: String
     private val standardDatabasePath: String
+
     private var listener: ProgressAssetsSQLiteListener? = null
+
+    private var stateFs: StatFs = StatFs(Environment.getExternalStorageDirectory().absolutePath)
 
     init {
         standardDatabaseDir = context.applicationInfo.dataDir + File.separator +
@@ -79,7 +82,6 @@ open class AssetsSQLite(private val context: Context, name: String,
     private fun openAssetsDatabaseCompacted(): SQLiteDatabase? {
         return File(standardDatabasePath.replace(".db", ".zip")).let {
             if (!it.exists()) copyFileFromAssetsToStandardPath(it)
-            val stateFs = StatFs(Environment.getExternalStorageDirectory().absolutePath)
             Log.i(TAG, context.getString(R.string.unziping_files))
             context as Activity
             if (it.exists()) {
@@ -135,10 +137,16 @@ open class AssetsSQLite(private val context: Context, name: String,
     private fun copyFileFromAssetsToStandardPath(file: File) {
         File(standardDatabaseDir).let { if (!it.exists()) it.mkdir() }
         getInputStreamFromAssets(file.name).let { inputStream: InputStream? ->
-            if (inputStream != null) FileOutputStream(file.absolutePath).let {
-                Log.i(TAG, context.getString(R.string.moving_files))
-                inputStream.copyTo(it)
-            }
+            if (stateFs.availableBytes > file.length()) {
+                if (inputStream != null) FileOutputStream(file.absolutePath).let {
+                    Log.i(TAG, context.getString(R.string.moving_files))
+                    inputStream.copyTo(it)
+                }
+            } else (context as Activity).runOnUiThread ( {
+                listener?.onErrorUnziping(IOException("Armazenamento insuficiente. " +
+                        "Necessário ${(file.length() / 1024) / 1024} MB, " +
+                        "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
+            } )
         }
     }
 
