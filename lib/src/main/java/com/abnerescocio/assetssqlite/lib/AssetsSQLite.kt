@@ -96,7 +96,7 @@ open class AssetsSQLite(private val context: Context, name: String,
                                         bytesSizeUnziped += bytes
                                         bytes = bis.read(buffer)
                                         val progress = (bytesSizeUnziped.toDouble() / entry.size.toDouble()) * 100.0
-                                        context.runOnUiThread( Runnable {
+                                        context.runOnUiThread(Runnable {
                                             listener?.onProgressAssetsSQLiteUnziping(entry.compressedSize,
                                                     entry.size, bytesSizeUnziped, progress.roundTo2DecimalPlaces())
                                         })
@@ -108,12 +108,12 @@ open class AssetsSQLite(private val context: Context, name: String,
                             }
                             Log.i(TAG, context.getString(R.string.unziping_successfully))
                         } else {
-                            context.runOnUiThread { Runnable {
+                            context.runOnUiThread(Runnable {
                                 listener?.onErrorUnziping(IOException("Armazenamento insuficiente. " +
                                         "Necessário ${(entry.size / 1024) / 1024} MB, " +
                                         "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
 
-                            } }
+                            })
                             return null
                         }
                     }
