@@ -3,7 +3,6 @@ package com.abnerescocio.assetssqlite.lib
 import android.app.Activity
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteDatabaseLockedException
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Environment
@@ -16,9 +15,8 @@ import java.util.zip.ZipFile
 /**
  * Created by abnerESC on 02/03/2018
  */
-open class AssetsSQLite(private val context: Context, name: String,
-                   factory: SQLiteDatabase.CursorFactory?, private val newVersion: Int)
-    : SQLiteOpenHelper(context, name, factory, newVersion) {
+open class AssetsSQLite(private val context: Context, name: String)
+    : SQLiteOpenHelper(context, name, null, DEFAULT_VERSION) {
 
     private val standardDatabaseDir: String
     private val standardDatabasePath: String
@@ -34,30 +32,21 @@ open class AssetsSQLite(private val context: Context, name: String,
         if (context is ProgressAssetsSQLiteListener) listener = context
     }
 
-    override fun onCreate(db: SQLiteDatabase?) {
+    final override fun onCreate(db: SQLiteDatabase?) {
 
     }
 
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+    final override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
 
     }
 
     override fun getWritableDatabase(): SQLiteDatabase? {
         var sqLiteDatabase = openStandardDatabase()
-        if (sqLiteDatabase != null && sqLiteDatabase.version < newVersion) sqLiteDatabase = null
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabase()
         if (sqLiteDatabase == null) sqLiteDatabase = openAssetsDatabaseCompacted()
         if (sqLiteDatabase == null) SQLiteException("Esteja certo de ter adicionado na pasta " +
-                "ASSETS arquivos com uma das extensões: $databaseName " +
+                "ASSETS arquivos com uma das seguintes extensões: $databaseName " +
                 "ou ${databaseName.replace(".db", ".zip")}").printStackTrace()
-        try {
-            sqLiteDatabase?.beginTransaction()
-            sqLiteDatabase?.version = newVersion
-            sqLiteDatabase?.setTransactionSuccessful()
-            sqLiteDatabase?.endTransaction()
-        } catch (e: SQLiteDatabaseLockedException) {
-            e.printStackTrace()
-        }
         return sqLiteDatabase
     }
 
@@ -163,5 +152,6 @@ open class AssetsSQLite(private val context: Context, name: String,
     companion object {
         const val TAG = "AssetsSQLite"
         const val DATABASES = "databases"
+        const val DEFAULT_VERSION = 1
     }
 }
