@@ -8,6 +8,7 @@ android {
         applicationId "com.abnerescocio.assetssqlite.app"
         minSdkVersion 21
         targetSdkVersion 27
+        buildToolsVersion "27.0.3"
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
