@@ -23,7 +23,7 @@ open class AssetsSQLite(private val context: Context, name: String)
 
     private var listener: ProgressAssetsSQLiteListener? = null
 
-    private var stateFs: StatFs = StatFs(Environment.getExternalStorageDirectory().absolutePath)
+    private var statFs: StatFs = StatFs(Environment.getExternalStorageDirectory().absolutePath)
 
     init {
         standardDatabaseDir = context.applicationInfo.dataDir + File.separator +
@@ -76,7 +76,7 @@ open class AssetsSQLite(private val context: Context, name: String)
             if (it.exists()) {
                 ZipFile(it).use { zip ->
                     zip.getEntry(databaseName).let { entry ->
-                        if (stateFs.availableBytes > entry.size) {
+                        if (statFs.availableBytes > entry.size) {
                             BufferedInputStream(zip.getInputStream(entry)).use { bis ->
                                 File(standardDatabasePath).outputStream().buffered().use { bos ->
                                     var bytesSizeUnziped: Long = 0
@@ -102,7 +102,7 @@ open class AssetsSQLite(private val context: Context, name: String)
                             context.runOnUiThread(Runnable {
                                 listener?.onErrorUnziping(IOException("Armazenamento insuficiente. " +
                                         "Necessário ${(entry.size / 1024) / 1024} MB, " +
-                                        "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
+                                        "disponível ${(statFs.availableBytes / 1024) / 1024} MB"))
 
                             })
                             return null
@@ -126,16 +126,16 @@ open class AssetsSQLite(private val context: Context, name: String)
     private fun copyFileFromAssetsToStandardPath(file: File) {
         File(standardDatabaseDir).let { if (!it.exists()) it.mkdir() }
         getInputStreamFromAssets(file.name).let { inputStream: InputStream? ->
-            if (stateFs.availableBytes > file.length()) {
+            if (statFs.availableBytes > file.length()) {
                 if (inputStream != null) FileOutputStream(file.absolutePath).let {
                     Log.i(TAG, context.getString(R.string.moving_files))
                     inputStream.copyTo(it)
                 }
-            } else (context as Activity).runOnUiThread ( {
+            } else (context as Activity).runOnUiThread {
                 listener?.onErrorUnziping(IOException("Armazenamento insuficiente. " +
                         "Necessário ${(file.length() / 1024) / 1024} MB, " +
-                        "disponível ${(stateFs.availableBytes / 1024) / 1024} MB"))
-            } )
+                        "disponível ${(statFs.availableBytes / 1024) / 1024} MB"))
+            }
         }
     }
 
