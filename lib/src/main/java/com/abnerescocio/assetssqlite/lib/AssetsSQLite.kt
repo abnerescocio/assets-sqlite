@@ -97,6 +97,7 @@ open class AssetsSQLite(private val context: Context, name: String)
                                     })
                                 }
                             }
+
                             Log.i(TAG, context.getString(R.string.unziping_successfully))
                         } else {
                             context.runOnUiThread(Runnable {
@@ -108,7 +109,9 @@ open class AssetsSQLite(private val context: Context, name: String)
                             return null
                         }
                     }
+
                 }
+                it.delete()
                 openStandardDatabase()
             } else null
         }
